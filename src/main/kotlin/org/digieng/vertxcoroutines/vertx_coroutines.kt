@@ -105,10 +105,10 @@ fun <T> toChannel(vertx: Vertx, stream: ReadStream<T>, capacity: Int = 256): Rec
 }
 
 fun <T> toChannel(context: Context, stream: ReadStream<T>, capacity: Int = 256): ReceiveChannel<T> {
-    val ret = ChannelReadStream(context, stream, capacity)
+    val result = ChannelReadStream(context, stream, capacity)
 
-    ret.subscribe()
-    return ret
+    result.subscribe()
+    return result
 }
 
 @Suppress("unused")
@@ -118,10 +118,10 @@ fun <T> toChannel(vertx: Vertx, stream: WriteStream<T>, capacity: Int = 256): Se
 }
 
 fun <T> toChannel(context: Context, stream: WriteStream<T>, capacity: Int = 256): SendChannel<T> {
-    val ret = ChannelWriteStream(context, stream, capacity)
+    val result = ChannelWriteStream(context, stream, capacity)
 
-    ret.subscribe()
-    return ret
+    result.subscribe()
+    return result
 }
 
 /**
