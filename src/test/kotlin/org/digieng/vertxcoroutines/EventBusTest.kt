@@ -31,32 +31,36 @@ class EventBusTest {
     }
 
     @After
-    fun after(testContext: TestContext) {
-        vertx.close(testContext.asyncAssertSuccess())
+    fun after(testCtx: TestContext) {
+        vertx.close(testCtx.asyncAssertSuccess())
     }
 
     @Test
-    fun testUnregister(testContext: TestContext) {
+    fun testUnregister(testCtx: TestContext) {
         val bus = vertx.eventBus()
         val consumer = bus.consumer<Int>("the-address")
-        val channel = toChannel(vertx, consumer.bodyStream())
-        val async = testContext.async()
+        val channel = toChannel(vertx, stream = consumer.bodyStream())
+        val async = testCtx.async()
 
         vertx.runCoroutine {
             val list = mutableListOf<Int>()
 
             println("Processing messages in channel...")
             for (msg in channel) list += msg
-            testContext.assertEquals(listOf(0, 1, 2, 3, 4), list)
-            async.complete()
+            println("List: $list")
+            testCtx.assertEquals(listOf(0, 1, 2, 3, 4), list)
         }
         (0..4).forEachIndexed { index, _ ->
             bus.send("the-address", index)
         }
-        vertx.setTimer(50) { consumer.unregister() }
+        vertx.setTimer(50L) {
+            consumer.unregister()
+            println("Unregistered consumer.")
+        }
+        async.complete()
     }
 
-    private suspend fun replyCoroutine(async: Async?, channel: ReceiveChannel<Int?>) {
+    private suspend fun replyCoroutine(async: Async?, channel: ReceiveChannel<Int>) {
         val bus = vertx.eventBus()
         var count = 0
 
@@ -83,11 +87,11 @@ class EventBusTest {
     }
 
     @Test
-    fun testReply(testContext: TestContext) {
+    fun testReply(testCtx: TestContext) {
         val bus = vertx.eventBus()
         val consumer = bus.consumer<Int>("the-address")
-        val channel: ReceiveChannel<Int?> = toChannel(vertx, consumer.bodyStream())
-        val async = testContext.async()
+        val channel: ReceiveChannel<Int> = toChannel(vertx, consumer.bodyStream())
+        val async = testCtx.async()
 
         bus.consumer<Int>("another-address", replyHandler())
         vertx.runCoroutine { replyCoroutine(async, channel) }
@@ -97,21 +101,21 @@ class EventBusTest {
     }
 
     @Test
-    fun testReplyFailure(testContext: TestContext) {
+    fun testReplyFailure(testCtx: TestContext) {
         val bus = vertx.eventBus()
-        val async = testContext.async()
+        val async = testCtx.async()
 
         bus.consumer<Int>("the-address") { it.fail(5, "it-failed") }
         vertx.runCoroutine {
             try {
                 asyncResult<Message<Int?>> { bus.send("the-address", "the-body", it) }
             } catch (ex: Exception) {
-                testContext.assertTrue(ex is ReplyException)
+                testCtx.assertTrue(ex is ReplyException)
                 val err: ReplyException = ex as ReplyException
 
-                testContext.assertEquals(5, err.failureCode())
-                testContext.assertEquals(ReplyFailure.RECIPIENT_FAILURE, err.failureType())
-                testContext.assertEquals("it-failed", err.message)
+                testCtx.assertEquals(5, err.failureCode())
+                testCtx.assertEquals(ReplyFailure.RECIPIENT_FAILURE, err.failureType())
+                testCtx.assertEquals("it-failed", err.message)
                 async.complete()
             }
         }
